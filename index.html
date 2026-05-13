@@ -499,12 +499,23 @@ showListBtn.addEventListener('click', () => {
   renderTable();
 });
 
-/* ===== REPORT EXCEL COMPLETO ===== */
+/* ===== REPORT EXCEL COMPLETO PROTETTO ===== */
 reportBtn.addEventListener('click', () => {
+
+  const password = prompt("Inserisci password report");
+
+  if(password !== "2006"){
+    alert("Password errata");
+    return;
+  }
+
   const ws = XLSX.utils.json_to_sheet(rawRows);
   const wb = XLSX.utils.book_new();
+
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
   XLSX.writeFile(wb,'report_completo.xlsx');
+
 });
 
 /* ===== NUOVO OSPITE DA CAMPO DI RICERCA ===== */
