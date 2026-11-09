@@ -431,7 +431,19 @@ function renderTable(){
 /* ===== POPUP ===== */
 let popupTimer = null;
 
+function posizionaPopup(){
+  const fondoPulsanti = Math.max(
+    qrBtn.getBoundingClientRect().bottom,
+    listaBtn.getBoundingClientRect().bottom
+  );
+  popupConfirm.style.top = Math.max(12, fondoPulsanti + 16) + 'px';
+}
+
+window.addEventListener('resize', posizionaPopup);
+window.addEventListener('scroll', posizionaPopup, {passive: true});
+
 function mostraPopup(testo, tipo, ospite = null){
+  posizionaPopup();
   clearTimeout(popupTimer);
   popupConfirm.textContent = testo;
   popupConfirm.classList.toggle('popupError', tipo === "errore");
