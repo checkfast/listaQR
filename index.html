@@ -429,30 +429,50 @@ function renderTable(){
 }
 
 /* ===== POPUP ===== */
-function mostraPopup(testo, tipo){
-  popupConfirm.textContent = testo;
-  popupConfirm.classList.remove('popupError');
+let popupTimer = null;
 
-  if(tipo === "errore"){
-    popupConfirm.classList.add('popupError');
+function mostraPopup(testo, tipo, ospite = null){
+  clearTimeout(popupTimer);
+  popupConfirm.textContent = testo;
+  popupConfirm.classList.toggle('popupError', tipo === "errore");
+  popupConfirm.setAttribute('role', 'status');
+  popupConfirm.setAttribute('aria-live', 'polite');
+
+  if(ospite && tipo !== "errore"){
+    const riepilogo = document.createElement('div');
+    riepilogo.style.cssText = 'position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);width:min(900px, calc(100vw - 30px));max-height:55vh;overflow:auto;border-radius:12px;background:#4CAF50;color:#fff;box-shadow:0 8px 24px #0005;white-space:normal;text-align:left;';
+    const tabella = document.createElement('table');
+    tabella.style.cssText = 'width:100%;table-layout:fixed;margin:0;border-collapse:collapse;';
+    const intestazione = tabella.createTHead().insertRow();
+    const riga = tabella.createTBody().insertRow();
+    riga.className = 'confirmed';
+    ['NOME', 'AZIENDA', 'NOTE'].forEach((titolo, indice) => {
+      const th = document.createElement('th');
+      th.textContent = titolo;
+      th.scope = 'col';
+      th.style.cssText = 'position:static;background:#388e3c;color:#fff;padding:10px;font-size:14px;';
+      intestazione.appendChild(th);
+      const td = riga.insertCell();
+      td.textContent = String([getNome(ospite), getAzienda(ospite), getNote(ospite)][indice] || '');
+      td.style.cssText = 'padding:12px 10px;font-size:18px;font-weight:600;vertical-align:top;overflow-wrap:anywhere;white-space:pre-wrap;border:0;';
+    });
+    riepilogo.appendChild(tabella);
+    popupConfirm.appendChild(riepilogo);
   }
 
   popupConfirm.style.display = 'block';
-
-  setTimeout(() => {
+  popupTimer = setTimeout(() => {
     popupConfirm.style.display = 'none';
     popupConfirm.classList.remove('popupError');
-  }, 1800);
+    popupConfirm.textContent = '';
+  }, ospite ? 5000 : (tipo === "errore" ? 1800 : 300));
 }
 
 /* ===== INVIO DATI A APPS SCRIPT ===== */
-async function confermaOspite(dati){
-
-  popupConfirm.textContent = "Ospite accreditato";
-  popupConfirm.classList.remove('popupError');
-  popupConfirm.style.display = 'block';
-
-  const durata = 300;
+async function confermaOspite(dati, daQR = false){
+  clearTimeout(popupTimer);
+  popupConfirm.style.display = 'none';
+  popupConfirm.textContent = '';
 
   try{
     const res = await fetch(sheetURL, {
@@ -461,30 +481,22 @@ async function confermaOspite(dati){
     });
 
     if (!res.ok) {
-      popupConfirm.style.display = 'none';
-      alert("Errore dal server (" + res.status + ")");
+      mostraPopup("Errore dal server (" + res.status + ")", "errore");
       return;
     }
 
-    setTimeout(() => {
-      searchBox.value = "";
-      listVisible = false;
-      selectedRow = null;
-      selectedData = null;
-      selectedKey = null;
-      confirmCard.classList.add('hidden');
+    searchBox.value = "";
+    listVisible = false;
+    selectedRow = null;
+    selectedData = null;
+    selectedKey = null;
+    confirmCard.classList.add('hidden');
+    renderTable();
 
-      renderTable();
-
-      popupConfirm.style.display = 'none';
-
-      caricaLista();
-
-    }, durata);
-
+    mostraPopup("Ospite accreditato", "successo", daQR ? dati : null);
+    caricaLista();
   }catch(err){
-    popupConfirm.style.display = 'none';
-    alert("Errore di rete o connessione.");
+    mostraPopup("Errore di rete o connessione.", "errore");
   }
 }
 
@@ -679,7 +691,7 @@ async function handleQR(result){
 
     try{ successSound.play(); }catch(e){}
 
-    await confermaOspite(ospite);
+    await confermaOspite(ospite, true);
 
   }catch(err){
     mostraPopup("Errore accredito", "errore");
